@@ -13,19 +13,9 @@ int main()
 {
 	// variable
 	int sockdf;
-	int recv_size, send_size, write_size;
+	int recv_size, write_size;
 	struct sockaddr_in servAddr;
-	char send_buffer[BUFFERSIZE];
-	char recv_buffer[BUFFERSIZE];
-
-	// filename
-	int num = 0;
-	char filename[10];
-	sprintf(filename, "out_%d.txt", num);
-
-	// file variable
-	char *file_path = filename;
-	int filefd;
+	char buffer[BUFFERSIZE];
 
 	// create socket
 	sockdf = socket(AF_INET, SOCK_STREAM, 0);
@@ -40,60 +30,29 @@ int main()
 	// connect
 	connect(sockdf, (struct sockaddr *)& servAddr, sizeof(servAddr));
 
-	// open file
-	filefd = open(file_path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-	if (filefd == -1)
-	{
-		perror("open file failed");
-		exit(EXIT_FAILURE);
-	}
-
 	while(1)
 	{
-		printf("Please enter the fail name you want to retrive\n");
+		// keyboard input
+		printf("Please enter something\n");
+		scanf("%s", buffer);
 
-		scanf("%s", send_buffer);
+		// write
+		write_size = write(sockdf, buffer, strlen(buffer));
+		printf("write_size: %d\n", write_size);
+		printf("write: %s\n\n", buffer);
 
-		send_size = write(sockdf, send_buffer, strlen(send_buffer));
+		puts("one");
 
-		printf("send_size: %d\n", send_size);
-		printf("send: %s\n\n", send_buffer);
+		recv_size = read(sockdf, buffer, BUFFERSIZE);
 
-		recv_size = read(sockdf, recv_buffer, BUFFERSIZE);
+		puts("two");
 
-		recv_buffer[recv_size] = '\0';
-
+		// read
+		buffer[recv_size] = '\0';
 		printf("recv_size: %d\n", recv_size);
-		printf("recv: %s\n", recv_buffer);
-
-		printf("Server Reply: %s \n\n", recv_buffer);
-
-		// if (strcmp(recv_buffer, send_buffer) == 0)
-		// {
-		// 	printf("%s\n", "great");
-
-		// 	recv_size = read(sockdf, recv_buffer, BUFFERSIZE);
-
-		// 	printf("recv_size: %d\n", recv_size);
-
-		// 	recv_buffer[recv_size] = '\0';
-
-		// 	write_size = write(filefd, recv_buffer, recv_size);
-
-		// 	printf("write_size: %d\n", write_size);
-
-		// 	if (write_size == -1)
-		// 	{
-		// 		perror("write to file failed");
-		// 		exit(EXIT_FAILURE);
-		// 	}
-
-
-		// }
-
+		printf("recv: %s\n", buffer);
 	}
 
 	close(sockdf);
-	close(filefd);
 	return 0;
 }
