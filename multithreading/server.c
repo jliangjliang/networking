@@ -17,9 +17,6 @@
 // declare functions
 void *clientHandler(void *fdPointer);
 
-// mutex lock
-pthread_mutex_t lock;
-
 int main()
 {
 	// create connection queue
@@ -55,13 +52,10 @@ int main()
 	// loop the server
 	while (1)
 	{
-		if (connQueue->count <= NUMWORKER)
+		if (connQueue->count < NUMWORKER)
 		{
-			// put connection to array (assume connection is not a problem)
-			pthread_mutex_lock(&lock);
 			enqueue(connQueue, (accept(listenfd, (struct sockaddr *) &clitAddr, &clitlen)));
-			pthread_mutex_unlock(&lock);
-			printf("Queue size: %d\n", connQueue->count);
+			printf("Main queue size: %d\n", connQueue->count);
 		}
 
 	}
@@ -76,34 +70,38 @@ void *clientHandler(void *connQueue)
 	struct Queue *queue = (struct Queue *) connQueue;
 	int read_size, write_size;
 	char buffer[BUFFERSIZE];
-	int sockfd;
+	int sockfd = -1;
 	struct Node *head;
 
-	puts("start handling");
+	puts("start handling\n");
 
 	// loop the queue
 	while (1)
 	{
-		// get connection, need mutext
-		pthread_mutex_lock(&lock);
 		if (queue->count > 0)
 		{
 			head = dequeue(queue);
+			sockfd = head->data;
+			printf("Handler queue size: %d\n", queue->count);
 		}
-		pthread_mutex_unlock(&lock);
 
-		sockfd = head->data;
+		if (sockfd == -1)
+		{
+			continue;
+		}
+		else
+		{
+			// read sockfd
+			read_size = read(sockfd, buffer, BUFFERSIZE);
+			printf("read_size: %d\n", read_size);
+			printf("read: %s\n", buffer);
 
-		// read sockfd
-		read_size = read(sockfd, buffer, BUFFERSIZE);
-		printf("read_size: %d\n", read_size);
-		printf("read: %s\n", buffer);
-
-		// write sockfd
-		buffer[read_size] = '\0';
-		write_size = write(sockfd, buffer, read_size);
-		printf("write_size: %d\n", write_size);
-		printf("write: %s\n", buffer);
+			// write sockfd
+			buffer[read_size] = '\0';
+			write_size = write(sockfd, buffer, read_size);
+			printf("write_size: %d\n", write_size);
+			printf("write: %s\n\n", buffer);
+		}
 	}
 
 	return 0;

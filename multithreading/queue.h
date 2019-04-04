@@ -1,5 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
+
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
 struct Node
 {
@@ -9,7 +12,7 @@ struct Node
 
 struct Queue
 {
-    struct Node *head, *tail, *temp, *headTemp;
+    struct Node *head, *tail, *temp;
     int count;
 };
 
@@ -32,6 +35,7 @@ void enqueue(struct Queue *queue, int data)
 {
 	struct Node *newNode = createNode(data);
 
+	// pthread_mutex_lock(&lock);
 	if (queue->head == NULL)
 	{
 		queue->head = queue->tail = newNode;
@@ -42,11 +46,13 @@ void enqueue(struct Queue *queue, int data)
 		queue->tail = newNode;
 	}
 	queue->count++;
+	// pthread_mutex_unlock(&lock);
 
 }
 
 struct Node *dequeue(struct Queue *queue)
 {
+	// pthread_mutex_lock(&lock);
 	if (queue->head == NULL)
 	{
 		perror("Error: dequeue from an empty queue.");
@@ -67,37 +73,5 @@ struct Node *dequeue(struct Queue *queue)
 		queue->count--;
 		return temp;
 	}
-}
-
-void getSize(struct Queue *queue)
-{
-	printf("\nQueue Size: %d\n", queue->count);
-}
-
-int isEmpty(struct Queue *queue)
-{
-	if (queue->head == NULL && queue->tail == NULL)
-		return 0;
-	else
-		return -1;
-}
-
-void display(struct Queue *queue)
-{
-	struct Node *headTemp = queue->head;
-
-	if (queue->head == NULL && queue->tail ==NULL)
-	{
-		printf("Queue is empty\n");
-		return;
-	}
-
-	while (headTemp != queue->tail)
-	{
-		printf("%d ", headTemp->data);
-		headTemp = headTemp->next;
-	}
-
-	if (headTemp == queue->tail)
-		printf("%d", headTemp->data);
+	// pthread_mutex_unlock(&lock);
 }

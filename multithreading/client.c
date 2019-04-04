@@ -7,7 +7,7 @@
 #include <fcntl.h>
 
 #define BUFFERSIZE 2000
-#define PORT 1234
+#define PORT 25969
 
 int main()
 {
@@ -20,7 +20,7 @@ int main()
 	// create socket
 	sockdf = socket(AF_INET, SOCK_STREAM, 0);
 
-	puts("sock created.");
+	puts("sock created.\n");
 
 	// configure servaddr
 	servAddr.sin_family = AF_INET;
@@ -41,16 +41,11 @@ int main()
 		printf("write_size: %d\n", write_size);
 		printf("write: %s\n\n", buffer);
 
-		puts("one");
-
-		recv_size = read(sockdf, buffer, BUFFERSIZE);
-
-		puts("two");
-
 		// read
+		recv_size = read(sockdf, buffer, BUFFERSIZE);
 		buffer[recv_size] = '\0';
 		printf("recv_size: %d\n", recv_size);
-		printf("recv: %s\n", buffer);
+		printf("recv: %s\n\n", buffer);
 	}
 
 	close(sockdf);
