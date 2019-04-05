@@ -49,7 +49,7 @@ int main()
 
 	puts("working threads created.");
 
-	// loop the server
+	// loop the server, enqueue connection
 	while (1)
 	{
 		if (connQueue->count < NUMWORKER)
@@ -66,7 +66,7 @@ int main()
 // client_handler
 void *clientHandler(void *connQueue)
 {
-	
+	// variables
 	struct Queue *queue = (struct Queue *) connQueue;
 	int read_size, write_size;
 	char buffer[BUFFERSIZE];
@@ -75,7 +75,7 @@ void *clientHandler(void *connQueue)
 
 	puts("start handling\n");
 
-	// loop the queue
+	// loop, dequeue, read and write
 	while (1)
 	{
 		if (queue->count > 0)
@@ -85,7 +85,7 @@ void *clientHandler(void *connQueue)
 			printf("Handler queue size: %d\n", queue->count);
 		}
 
-		if (sockfd == -1)
+		if (sockfd < 0)
 		{
 			continue;
 		}
@@ -104,5 +104,6 @@ void *clientHandler(void *connQueue)
 		}
 	}
 
+	close(sockfd);
 	return 0;
 }
