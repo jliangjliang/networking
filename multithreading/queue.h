@@ -52,21 +52,27 @@ void enqueue(struct Queue *queue, int data)
 
 struct Node *dequeue(struct Queue *queue)
 {
-	pthread_mutex_lock(&queue->lock);
-	while(queue->head != NULL)
+	struct Node *temp = queue->head;
+
+	while(1)
 	{
-		struct Node *temp = queue->head;
-		if (queue->head->next != NULL)
+		pthread_mutex_lock(&queue->lock);
+		if (queue->head != NULL)
 		{
-			queue->head = queue->head->next;
+			if (queue->head->next != NULL)
+			{
+				queue->head = queue->head->next;
+			}
+			else
+			{
+				queue->head = NULL;
+				queue->tail = NULL;
+			}
+			queue->count--;
+			pthread_mutex_unlock(&queue->lock);
+			return temp;
 		}
-		else
-		{
-			queue->head = NULL;
-			queue->tail = NULL;
-		}
-		queue->count--;
 		pthread_mutex_unlock(&queue->lock);
-		return temp;
+		return NULL;
 	}
 }

@@ -81,15 +81,13 @@ void *clientHandler(void *connQueue)
 		if (queue->count > 0)
 		{
 			head = dequeue(queue);
+			printf("sockfd before: %d\n", sockfd);
 			sockfd = head->data;
+			printf("sockfd after: %d\n", sockfd);
 			printf("Handler queue size: %d\n", queue->count);
 		}
 
-		if (sockfd < 0)
-		{
-			continue;
-		}
-		else
+		if (sockfd > 0)
 		{
 			// read sockfd
 			read_size = read(sockfd, buffer, BUFFERSIZE);
