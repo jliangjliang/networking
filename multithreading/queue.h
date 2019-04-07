@@ -13,6 +13,7 @@ struct Queue
     struct Node *head, *tail, *temp;
     int count;
     pthread_mutex_t lock;
+    pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;;
 };
 
 struct Node *createNode(int data)
@@ -46,6 +47,7 @@ void enqueue(struct Queue *queue, int data)
 		queue->tail = newNode;
 	}
 	queue->count++;
+	pthread_cond_signal(&queue->cond1);
 	pthread_mutex_unlock(&queue->lock);
 
 }
@@ -57,22 +59,23 @@ struct Node *dequeue(struct Queue *queue)
 	while(1)
 	{
 		pthread_mutex_lock(&queue->lock);
-		if (queue->head != NULL)
+		if (queue->head == NULL)
 		{
-			if (queue->head->next != NULL)
-			{
-				queue->head = queue->head->next;
-			}
-			else
-			{
-				queue->head = NULL;
-				queue->tail = NULL;
-			}
-			queue->count--;
-			pthread_mutex_unlock(&queue->lock);
-			return temp;
+			pthread_cond_wait(&queue->cond1, &queue->lock);
 		}
+
+		if (queue->head->next != NULL)
+		{
+			queue->head = queue->head->next;
+		}
+		else
+		{
+			queue->head = NULL;
+			queue->tail = NULL;
+		}
+
+		queue->count--;
 		pthread_mutex_unlock(&queue->lock);
-		return NULL;
+		return temp;
 	}
 }

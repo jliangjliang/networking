@@ -14,6 +14,8 @@
 #define LISTENSIZE 2
 #define BUFFERSIZE 2000
 
+// TODO: need to destroy buffer, queue, thread
+
 // declare functions
 void *clientHandler(void *fdPointer);
 
@@ -75,10 +77,12 @@ void *clientHandler(void *connQueue)
 
 	puts("start handling\n");
 
+	sleep(1);
+
 	// loop, dequeue, read and write
 	while (1)
-	{
-		if (queue->count > 0)
+	{	
+		if (sockfd == -1 && queue->count > 0)
 		{
 			head = dequeue(queue);
 			printf("sockfd before: %d\n", sockfd);
@@ -91,6 +95,11 @@ void *clientHandler(void *connQueue)
 		{
 			// read sockfd
 			read_size = read(sockfd, buffer, BUFFERSIZE);
+			if (read_size == 0)
+			{
+				sockfd = -1;
+				continue;
+			}
 			printf("read_size: %d\n", read_size);
 			printf("read: %s\n", buffer);
 
