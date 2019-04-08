@@ -5,7 +5,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-#include "queue.h"
+#include "array_queue.h"
 
 #define NUMWORKER 2
 #define PORT 25969
