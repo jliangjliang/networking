@@ -34,31 +34,28 @@ void enqueue(struct Queue *queue, int data)
 	pthread_mutex_lock(&queue->lock);
 
 	/* check if queue is full*/
-	if (queue->count < queue->capacity)
+	if (queue->count >= queue->capacity)
 	{
-		/* enqueue */
-		if (queue->head == NULL)
-		{
-			queue->head = newNode;
-			queue->tail = newNode;
-		}
-		else
-		{
-			queue->tail->next = newNode;
-			queue->tail = newNode;
-		}
+		perror("queue is full");
+		pthread_cond_wait(&(queue->not_full), &(queue->lock));
+	}
 
-		/* update count*/
-		queue->count++;
-		pthread_cond_signal(&queue->not_empty);
+	/* enqueue */
+	if (queue->head == NULL)
+	{
+		queue->head = newNode;
+		queue->tail = newNode;
 	}
 	else
 	{
-		perror("queue is full");
-		pthread_mutex_unlock(&queue->lock);
-		return;
+		queue->tail->next = newNode;
+		queue->tail = newNode;
 	}
 
+	/* update count*/
+	queue->count++;
+
+	pthread_cond_signal(&queue->not_empty);
 	pthread_mutex_unlock(&queue->lock);
 
 }
@@ -66,34 +63,36 @@ void enqueue(struct Queue *queue, int data)
 /* dequeue the head of the queue */
 struct Node *dequeue(struct Queue *queue)
 {
-	struct Node *temp = queue->head;
+	struct Node *temp;
 
-	// while(1)
-	// {
-		pthread_mutex_lock(&queue->lock);
-		/* if the queue is empty, continue*/
-		if (queue->head == NULL)
-		{
-			// continue;
-			pthread_cond_wait(&queue->not_empty, &queue->lock);
-		}
+	pthread_mutex_lock(&queue->lock);
+	/* if the queue is empty, wait*/
+	if (queue->head == NULL)
+	{
+		perror("queue is empty");
+		pthread_cond_wait(&(queue->not_empty), &(queue->lock));
+	}
 
-		/* dequeue */
-		if (queue->head->next != NULL)
-		{
-			queue->head = queue->head->next;
-		}
-		else
-		{
-			queue->head = NULL;
-			queue->tail = NULL;
-		}
+	temp = queue->head;
 
-		/* update count*/
-		queue->count--;
-		pthread_mutex_unlock(&queue->lock);
-		return temp;
-	// }
+	/* dequeue */
+	if (queue->head->next != NULL)
+	{
+		queue->head = queue->head->next;
+	}
+	else
+	{
+		queue->head = NULL;
+		queue->tail = NULL;
+	}
+
+	/* update count*/
+	queue->count--;
+
+	pthread_cond_signal(&(queue->not_full));
+	pthread_mutex_unlock(&queue->lock);
+
+	return temp;
 }
 
 /* get the size of */
@@ -106,4 +105,11 @@ int get_size(struct Queue *queue)
 	pthread_mutex_unlock(&queue->lock);
 
 	return size;
+}
+
+/* destroy a queue*/
+void destroy_queue(struct Queue *queue)
+{
+	/* need to free all the nodes in queue */
+	free(queue);
 }

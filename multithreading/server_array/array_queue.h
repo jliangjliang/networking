@@ -11,18 +11,24 @@ struct array_queue
     int capacity;
     int *array;
     pthread_mutex_t lock;
-    pthread_cond_t not_full;
     pthread_cond_t not_empty;
+    pthread_cond_t not_full;
 };
 
+/* create queue */
 struct array_queue *create_queue(int capacity);
 
+/* enqueue */
 void enqueue(struct array_queue *queue, int data);
 
+/* dequeue */
 int dequeue(struct array_queue *queue);
 
+/* get size of a queue*/
 int get_size(struct array_queue *queue);
 
+/* display elements in queue */
 void display_queue(struct array_queue *queue);
 
+/* destroy a queue*/
 void destroy_queue(struct array_queue *queue);

@@ -13,8 +13,8 @@ struct array_queue *create_queue(int capacity)
 	q->capacity = capacity;
 	q->array = malloc(capacity*sizeof(int));
 	pthread_mutex_init(&(q->lock), NULL);
-	// pthread_cond_init(&q->full, NULL);
-	pthread_cond_init(&q->not_empty, NULL);
+	pthread_cond_init(&(q->not_empty), NULL);
+	pthread_cond_init(&(q->not_full), NULL);
 	return q;
 }
 
@@ -22,63 +22,76 @@ struct array_queue *create_queue(int capacity)
 void enqueue(struct array_queue *queue, int data)
 {
 	pthread_mutex_lock(&queue->lock);
-	printf("enqueue data is: %d\n", data);
 
-	/* check if queue is not full*/
-	if (queue->count < queue->capacity)
+	/* check if queue is full*/
+	if (queue->count >= queue->capacity)
 	{
-		/* enqueue */
-		if (queue->count <= 0)
-		{
-			queue->array[0] = data;
-			queue->head = 0;
-			queue->tail = 0;
-			queue->count = 1;
-		}
-		else if (queue->tail == queue->capacity - 1)
-		{
-			queue->array[0] = data;
-			queue->tail = 0;
-			queue->count++;
-		}
-		else
-		{
-			queue->array[queue->tail+1] = data;
-			queue->tail++;
-			queue->count++;
-		}
-		pthread_cond_signal(&queue->not_empty);
+		perror("queue is full");
+		pthread_cond_wait(&(queue->not_full), &(queue->lock));
+	}
+
+	/* enqueue */
+	if (queue->count <= 0)
+	{
+		queue->array[0] = data;
+		queue->head = 0;
+		queue->tail = 0;
+		queue->count = 1;
+	}
+	else if (queue->tail == queue->capacity - 1)
+	{
+		queue->array[0] = data;
+		queue->tail = 0;
+		queue->count++;
 	}
 	else
 	{
-		perror("queue is full");
-		pthread_mutex_unlock(&queue->lock);
-		return;
+		queue->array[(queue->tail)+1] = data;
+		queue->tail++;
+		queue->count++;	
 	}
 
+	printf("en queue count: %d\n", queue->count);
+
+	pthread_cond_signal(&queue->not_empty);
 	pthread_mutex_unlock(&queue->lock);
 }
 
 /* dequeue the head of the queue */
 int dequeue(struct array_queue *queue)
 {
-	int head = queue->head;
-	int data = queue->array[head];
-	printf("dequeue data is: %d\n", data);
+	int head, data;
 
-	// while(1)
-	// {
-		pthread_mutex_lock(&queue->lock);
-		/* if the queue is empty, continue*/
-		if (queue->count <= 0)
-			pthread_cond_wait(&queue->not_empty, &queue->lock);
-		
+	pthread_mutex_lock(&queue->lock);
+	/* if the queue is empty, wait*/
+	if (queue->count <= 0)
+	{
+		perror("queue is empty");
+		pthread_cond_wait(&(queue->not_empty), &(queue->lock));
+	}
+
+	/* dequeue */
+	head = queue->head;
+	data = queue->array[head];
+
+	/* update */
+	if (queue->head == queue->capacity - 1)
+	{
+		queue->head = 0;
+		queue->count--;
+	}
+	else
+	{
 		queue->head++;
 		queue->count--;
+	}
 
-		pthread_mutex_unlock(&queue->lock);
-		return data;
-	// }
+	printf("de queue count: %d\n", queue->count);
+
+	pthread_cond_signal(&(queue->not_full));
+	pthread_mutex_unlock(&queue->lock);
+
+	return data;
 }
 
 /* get the size of */
@@ -93,6 +106,7 @@ int get_size(struct array_queue *queue)
 	return size;
 }
 
+/* display elements in  queue */
 void display_queue(struct array_queue *queue)
 {
 	int i;
@@ -102,4 +116,11 @@ void display_queue(struct array_queue *queue)
 		printf("%d ", queue->array[i]);
 	}
 	printf("\n");
+}
+
+/* destroy queue */
+void destroy_queue(struct array_queue *queue)
+{
+	free(queue->array);
+	free(queue);
 }
