@@ -13,7 +13,7 @@ struct Queue
     struct Node *head, *tail, *temp;
     int count;
     pthread_mutex_t lock;
-    pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;;
+    pthread_cond_t cond1 = PTHREAD_COND_INITIALIZER;
 };
 
 struct Node *createNode(int data)
