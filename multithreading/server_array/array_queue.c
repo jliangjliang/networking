@@ -4,29 +4,31 @@
 #include "array_queue.h"
 
 /* create a queue*/
-struct ArrayQueue *createQueue(int capacity)
+struct array_queue *create_queue(int capacity)
 {
-	struct ArrayQueue *q = (struct ArrayQueue*)malloc(1*sizeof(struct ArrayQueue));
-	q->head = -1;
-	q->tail = -1;
-	q->count = -1;
+	struct array_queue *q = (struct array_queue*)malloc(1*sizeof(struct array_queue));
+	q->head = 0;
+	q->tail = 0;
+	q->count = 0;
 	q->capacity = capacity;
 	q->array = malloc(capacity*sizeof(int));
-	pthread_mutex_init(&q->lock, NULL);
+	pthread_mutex_init(&(q->lock), NULL);
+	// pthread_cond_init(&q->full, NULL);
+	pthread_cond_init(&q->not_empty, NULL);
 	return q;
 }
 
 /* enqueue a node if the queue is not full */
-void enqueue(struct ArrayQueue *queue, int data)
+void enqueue(struct array_queue *queue, int data)
 {
 	pthread_mutex_lock(&queue->lock);
 	printf("enqueue data is: %d\n", data);
 
-	/* check if queue is full*/
+	/* check if queue is not full*/
 	if (queue->count < queue->capacity)
 	{
 		/* enqueue */
-		if (queue->count < 0)
+		if (queue->count <= 0)
 		{
 			queue->array[0] = data;
 			queue->head = 0;
@@ -45,46 +47,42 @@ void enqueue(struct ArrayQueue *queue, int data)
 			queue->tail++;
 			queue->count++;
 		}
-		// pthread_cond_signal(&queue->notEmpty);
+		pthread_cond_signal(&queue->not_empty);
 	}
 	else
 	{
 		perror("queue is full");
+		pthread_mutex_unlock(&queue->lock);
+		return;
 	}
 
 	pthread_mutex_unlock(&queue->lock);
-	return;
-
 }
 
 /* dequeue the head of the queue */
-int dequeue(struct ArrayQueue *queue)
+int dequeue(struct array_queue *queue)
 {
 	int head = queue->head;
 	int data = queue->array[head];
 	printf("dequeue data is: %d\n", data);
 
-	while(1)
-	{
+	// while(1)
+	// {
 		pthread_mutex_lock(&queue->lock);
 		/* if the queue is empty, continue*/
-		if (queue->count < 0)
-		{
-			pthread_mutex_unlock(&queue->lock);
-			continue;
-			// pthread_cond_wait(&queue->notEmpty, &queue->lock);
-		}
-
+		if (queue->count <= 0)
+			pthread_cond_wait(&queue->not_empty, &queue->lock);
+		
 		queue->head++;
 		queue->count--;
 
 		pthread_mutex_unlock(&queue->lock);
 		return data;
-	}
+	// }
 }
 
 /* get the size of */
-int getSize(struct ArrayQueue *queue)
+int get_size(struct array_queue *queue)
 {
 	pthread_mutex_lock(&queue->lock);
 
@@ -95,7 +93,7 @@ int getSize(struct ArrayQueue *queue)
 	return size;
 }
 
-void displayQueue(struct ArrayQueue *queue)
+void display_queue(struct array_queue *queue)
 {
 	int i;
 	for (i = 0; i < queue->capacity; ++i)

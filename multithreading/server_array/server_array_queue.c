@@ -22,7 +22,7 @@ void *clientHandler(void *fdPointer);
 int main()
 {
 	// create connection queue
-	struct ArrayQueue *connQueue = createQueue(QUEUECAPACITY);
+	struct array_queue *connQueue = create_queue(QUEUECAPACITY);
 
 	// server address
 	struct sockaddr_in servAddr;
@@ -60,7 +60,7 @@ int main()
 		if (connfd > 0)
 		{
 			enqueue(connQueue, connfd);
-			printf("Main queue size: %d\n", getSize(connQueue));
+			printf("Main queue size: %d\n", get_size(connQueue));
 		}
 
 	}
@@ -72,7 +72,7 @@ int main()
 void *clientHandler(void *connQueue)
 {
 	// variables
-	struct ArrayQueue *queue = (struct ArrayQueue *) connQueue;
+	struct array_queue *queue = (struct array_queue *) connQueue;
 	int read_size, write_size;
 	char buffer[BUFFERSIZE];
 	int sockfd = -1;
@@ -82,14 +82,18 @@ void *clientHandler(void *connQueue)
 	// loop, dequeue, read and write
 	while (1)
 	{	
-		if (sockfd == -1 && getSize(queue) > 0)
+		if (sockfd == -1 && get_size(queue) > 0)
 		{
 			printf("tid = %ld\n", syscall(SYS_gettid));
-			printf("Handler queue size before: %d\n", getSize(queue));
+			printf("Handler queue size before: %d\n", get_size(queue));
 			printf("sockfd before: %d\n", sockfd);
 			sockfd = dequeue(queue);
 			printf("sockfd after: %d\n", sockfd);
-			printf("Handler queue size after: %d\n\n", getSize(queue));
+			printf("Handler queue size after: %d\n\n", get_size(queue));
+			if (sockfd == 0)
+			{
+				sockfd == -1;
+			}
 		}
 
 		if (sockfd > 0)

@@ -4,7 +4,7 @@
 #include "queue.h"
 
 /* create a node */
-struct Node *createNode(int data)
+struct Node *create_node(int data)
 {
 	struct Node *newNode = (struct Node*)malloc(1*sizeof(struct Queue));
 	newNode->data = data;
@@ -14,11 +14,14 @@ struct Node *createNode(int data)
 
 
 /* create a queue*/
-struct Queue *createQueue(int capacity)
+struct Queue *create_queue(int capacity)
 {
 	struct Queue *q = (struct Queue*)malloc(1*sizeof(struct Queue));
-	pthread_mutex_init(&q->lock, NULL);
-	q->head = q->tail = NULL;
+	pthread_mutex_init(&(q->lock), NULL);
+	pthread_cond_init(&(q->not_empty), NULL);
+	pthread_cond_init(&(q->not_full), NULL);
+	q->head = NULL;
+	q->tail = NULL;
 	q->capacity = capacity;
 	return q;
 }
@@ -26,7 +29,7 @@ struct Queue *createQueue(int capacity)
 /* enqueue a node if the queue is not full */
 void enqueue(struct Queue *queue, int data)
 {
-	struct Node *newNode = createNode(data);
+	struct Node *newNode = create_node(data);
 
 	pthread_mutex_lock(&queue->lock);
 
@@ -47,11 +50,12 @@ void enqueue(struct Queue *queue, int data)
 
 		/* update count*/
 		queue->count++;
-		// pthread_cond_signal(&queue->notEmpty);
+		pthread_cond_signal(&queue->not_empty);
 	}
 	else
 	{
 		perror("queue is full");
+		pthread_mutex_unlock(&queue->lock);
 		return;
 	}
 
@@ -64,14 +68,14 @@ struct Node *dequeue(struct Queue *queue)
 {
 	struct Node *temp = queue->head;
 
-	while(1)
-	{
+	// while(1)
+	// {
 		pthread_mutex_lock(&queue->lock);
 		/* if the queue is empty, continue*/
 		if (queue->head == NULL)
 		{
-			continue;
-			// pthread_cond_wait(&queue->notEmpty, &queue->lock);
+			// continue;
+			pthread_cond_wait(&queue->not_empty, &queue->lock);
 		}
 
 		/* dequeue */
@@ -89,11 +93,11 @@ struct Node *dequeue(struct Queue *queue)
 		queue->count--;
 		pthread_mutex_unlock(&queue->lock);
 		return temp;
-	}
+	// }
 }
 
 /* get the size of */
-int getSize(struct Queue *queue)
+int get_size(struct Queue *queue)
 {
 	pthread_mutex_lock(&queue->lock);
 

@@ -21,7 +21,7 @@ void *clientHandler(void *fdPointer);
 int main()
 {
 	// create connection queue
-	struct Queue *connQueue = createQueue(QUEUECAPACITY);
+	struct Queue *connQueue = create_queue(QUEUECAPACITY);
 
 	// server address
 	struct sockaddr_in servAddr;
@@ -59,7 +59,7 @@ int main()
 		if (connfd > 0)
 		{
 			enqueue(connQueue, connfd);
-			printf("Main queue size: %d\n", getSize(connQueue));
+			printf("Main queue size: %d\n", get_size(connQueue));
 		}
 
 	}
@@ -82,13 +82,13 @@ void *clientHandler(void *connQueue)
 	// loop, dequeue, read and write
 	while (1)
 	{	
-		if (sockfd == -1 && getSize(queue) > 0)
+		if (sockfd == -1 && get_size(queue) > 0)
 		{
 			head = dequeue(queue);
 			printf("sockfd before: %d\n", sockfd);
 			sockfd = head->data;
 			printf("sockfd after: %d\n", sockfd);
-			printf("Handler queue size: %d\n", getSize(queue));
+			printf("Handler queue size: %d\n", get_size(queue));
 		}
 
 		if (sockfd > 0)

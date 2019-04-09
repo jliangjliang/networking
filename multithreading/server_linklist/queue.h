@@ -14,14 +14,16 @@ struct Queue
     int count;
     int capacity;
     pthread_mutex_t lock;
-    // pthread_cond_t notEmpty = PTHREAD_COND_INITIALIZER;
-    // pthread_cond_t notFull = PTHREAD_COND_INITIALIZER;
+    pthread_cond_t not_empty;
+    pthread_cond_t not_full;
 };
 
-struct Queue *createQueue(int capacity);
+struct Queue *create_queue(int capacity);
 
 void enqueue(struct Queue *queue, int data);
 
 struct Node *dequeue(struct Queue *queue);
 
-int getSize(struct Queue *queue);
+int get_size(struct Queue *queue);
+
+int destory_queue(struct Queue *queue);

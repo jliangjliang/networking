@@ -3,7 +3,7 @@
 #include <pthread.h>
 
 /* need two pointers to keep track of the head and tail*/
-struct ArrayQueue
+struct array_queue
 {
 	int head;
     int tail;
@@ -11,14 +11,18 @@ struct ArrayQueue
     int capacity;
     int *array;
     pthread_mutex_t lock;
+    pthread_cond_t not_full;
+    pthread_cond_t not_empty;
 };
 
-struct ArrayQueue *createQueue(int capacity);
+struct array_queue *create_queue(int capacity);
 
-void enqueue(struct ArrayQueue *queue, int data);
+void enqueue(struct array_queue *queue, int data);
 
-int dequeue(struct ArrayQueue *queue);
+int dequeue(struct array_queue *queue);
 
-int getSize(struct ArrayQueue *queue);
+int get_size(struct array_queue *queue);
 
-void displayQueue(struct ArrayQueue *queue);
+void display_queue(struct array_queue *queue);
+
+void destroy_queue(struct array_queue *queue);
