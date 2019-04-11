@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
-#include "array_queue.h"
+#include "array_queue_fork.h"
 
 /* create a queue*/
 struct array_queue *create_queue(int capacity)
@@ -21,13 +21,13 @@ struct array_queue *create_queue(int capacity)
 /* enqueue a node if the queue is not full */
 void enqueue(struct array_queue *queue, int data)
 {
-	pthread_mutex_lock(&queue->lock);
+	// pthread_mutex_lock(&queue->lock);
 
 	/* check if queue is full*/
 	if (queue->count >= queue->capacity)
 	{
 		perror("queue is full");
-		pthread_cond_wait(&(queue->not_full), &(queue->lock));
+		// pthread_cond_wait(&(queue->not_full), &(queue->lock));
 	}
 
 	/* enqueue */
@@ -53,8 +53,8 @@ void enqueue(struct array_queue *queue, int data)
 
 	printf("en queue count: %d\n", queue->count);
 
-	pthread_cond_signal(&queue->not_empty);
-	pthread_mutex_unlock(&queue->lock);
+	// pthread_cond_signal(&queue->not_empty);
+	// pthread_mutex_unlock(&queue->lock);
 }
 
 /* dequeue the head of the queue */
@@ -62,12 +62,12 @@ int dequeue(struct array_queue *queue)
 {
 	int head, data;
 
-	pthread_mutex_lock(&queue->lock);
+	// pthread_mutex_lock(&queue->lock);
 	/* if the queue is empty, wait*/
 	if (queue->count <= 0)
 	{
 		perror("queue is empty");
-		pthread_cond_wait(&(queue->not_empty), &(queue->lock));
+		// pthread_cond_wait(&(queue->not_empty), &(queue->lock));
 	}
 
 	/* dequeue */
@@ -88,8 +88,8 @@ int dequeue(struct array_queue *queue)
 
 	printf("de queue count: %d\n", queue->count);
 
-	pthread_cond_signal(&(queue->not_full));
-	pthread_mutex_unlock(&queue->lock);
+	// pthread_cond_signal(&(queue->not_full));
+	// pthread_mutex_unlock(&queue->lock);
 
 	return data;
 }
@@ -97,11 +97,11 @@ int dequeue(struct array_queue *queue)
 /* get the size of */
 int get_size(struct array_queue *queue)
 {
-	pthread_mutex_lock(&queue->lock);
+	// pthread_mutex_lock(&queue->lock);
 
 	int size = queue->count;
 
-	pthread_mutex_unlock(&queue->lock);
+	// pthread_mutex_unlock(&queue->lock);
 
 	return size;
 }

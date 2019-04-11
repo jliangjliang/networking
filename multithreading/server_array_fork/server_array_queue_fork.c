@@ -4,8 +4,9 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
-// #include <pthread.h>
 #include <syscall.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include "array_queue_fork.h"
 
 #define NUMWORKER 2
@@ -13,6 +14,7 @@
 #define LISTENSIZE 2
 #define BUFFERSIZE 2000
 #define QUEUECAPACITY 2
+#define MEMSIZE 1024
 
 // TODO: need to destroy buffer, queue, thread
 
@@ -21,8 +23,20 @@ void *clientHandler(void *fdPointer);
 
 int main()
 {
+	/* declare connection queue */
+	struct array_queue *connQueue;
+
+	/* create access key */
+	key_t key = ftok("shmfile", 60);
+
+	/* get share memory id */
+	int shmid = shmget(key, MEMSIZE, IPC_CREAT | 0666);
+
+	/* attach to share memory */
+	connQueue = (struct array_queue *) shmat(shmid, (void *) 0, 0);
+
 	/* create connection queue */
-	// struct array_queue *connQueue = create_queue(QUEUECAPACITY);
+	connQueue = create_queue(QUEUECAPACITY);
 
 	/* server address */
 	struct sockaddr_in servAddr;
@@ -42,86 +56,81 @@ int main()
 	bind(listenfd, (struct sockaddr *)&servAddr, sizeof(servAddr));
 	listen(listenfd, NUMWORKER);
 
-	/* create working threads */
-	// pthread_t workerThread[NUMWORKER];
-	// for (int i = 0; i < NUMWORKER; ++i)
-	// {
-	// 	pthread_create(&workerThread[i], NULL, clientHandler, (void *) connQueue);
-	// }
-
-	// puts("working threads created.");
+	/* connfd */
+	int connfd;
 
 	// Fork, a parent and a child
 	int pid;
 
 	pid = fork();
 
-	int connfd;
-
-	/* loop the server, accept and enqueue connection */
-	while (1)
+	if (pid > 0)
 	{
-		// connfd = accept(listenfd, (struct sockaddr *) &clitAddr, &clitlen);
-		// if (connfd > 0)
-		// {
-		// 	enqueue(connQueue, connfd);
-		// }
-
-		if (pid > 0)
+		printf("parent pid: %d\n", getpid());
+		/* loop the server, accept and enqueue connection */
+		while (1)
 		{
-			printf("parent pid: %d\n", getpid());
-			return 0;
+			connfd = accept(listenfd, (struct sockaddr *) &clitAddr, &clitlen);
+			if (connfd > 0)
+			{
+				enqueue(connQueue, connfd);
+			}
+			printf("enqueue connfd: %d\n", connfd);
 		}
-		else if (pid == 0)
-		{
-			printf("child pid: %d\n", getpid());
-			return 0;
-		}
-		else
-			perror("fock failed");
-		return 0;
+	}
+	else if (pid == 0)
+	{
+		sleep(10);
+		printf("child pid: %d\n", getpid());
+		clientHandler((void *) connQueue);
+	}
+	else
+	{
+		perror("fork() failed");
+		exit(1);
 	}
 
 	return 0;
 }
 
 /* client_handler */
-// void *clientHandler(void *connQueue)
-// {
-// 	/* variables */
-// 	struct array_queue *queue = (struct array_queue *) connQueue;
-// 	int read_size, write_size;
-// 	char buffer[BUFFERSIZE];
-// 	int sockfd = -1;
+void *clientHandler(void *connQueue)
+{
+	/* variables */
+	struct array_queue *queue = (struct array_queue *) connQueue;
+	int read_size, write_size;
+	char buffer[BUFFERSIZE];
+	int sockfd = -1;
 
-// 	puts("start handling\n");
+	puts("start handling\n");
 
-// 	/* loop, dequeue, read and write */
-// 	while (1)
-// 	{	
-// 		if (sockfd == -1)
-// 		{
-// 			sockfd = dequeue(queue);
-// 		}
+	/* loop, dequeue, read and write */
+	while (1)
+	{	
+		if (sockfd == -1)
+		{
+			printf("sockfd before dequeue: %d\n", sockfd);
+			sockfd = dequeue(queue);
+			printf("sockfd after dequeue: %d\n", sockfd);
+		}
 
-// 		if (sockfd > 0)
-// 		{
-// 			/* read sockfd */
-// 			read_size = read(sockfd, buffer, BUFFERSIZE);
+		if (sockfd > 0)
+		{
+			/* read sockfd */
+			read_size = read(sockfd, buffer, BUFFERSIZE);
 
-// 			/* if connection closed, reset sockfd*/
-// 			if (read_size == 0)
-// 			{
-// 				sockfd = -1;
-// 				continue;
-// 			}
+			/* if connection closed, reset sockfd*/
+			if (read_size == 0)
+			{
+				sockfd = -1;
+				continue;
+			}
 
-// 			/* write sockfd */
-// 			buffer[read_size] = '\0';
-// 			write_size = write(sockfd, buffer, read_size);
-// 		}
-// 	}
+			/* write sockfd */
+			buffer[read_size] = '\0';
+			write_size = write(sockfd, buffer, read_size);
+		}
+	}
 
-// 	close(sockfd);
-// 	return 0;
-// }
+	close(sockfd);
+}
