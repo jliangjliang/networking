@@ -7,6 +7,7 @@
 #include <syscall.h>
 #include <sys/ipc.h>
 #include <sys/shm.h>
+#include <sys/mman.h>
 #include "array_queue_fork.h"
 
 #define NUMWORKER 2
@@ -23,20 +24,28 @@ void *clientHandler(void *fdPointer);
 
 int main()
 {
-	/* declare connection queue */
-	struct array_queue *connQueue;
+	/* Share memory */
 
 	/* create access key */
-	key_t key = ftok("shmfile", 60);
+	key_t key = ftok("shmfile", 65);
 
 	/* get share memory id */
 	int shmid = shmget(key, MEMSIZE, IPC_CREAT | 0666);
 
+	/* declare shm */
+	struct array_queue *shm;
+
 	/* attach to share memory */
-	connQueue = (struct array_queue *) shmat(shmid, (void *) 0, 0);
+	shm = (struct array_queue *) shmat(shmid, NULL, 0);
+
+	// int protection = PROT_READ | PROT_WRITE;
+
+	// int visibility = MAP_ANONYMOUS | MAP_SHARED;
+
+	// void* shm = mmap(NULL, 128, protection, visibility, 0, 0);
 
 	/* create connection queue */
-	connQueue = create_queue(QUEUECAPACITY);
+	struct array_queue *connQueue = create_queue(QUEUECAPACITY);
 
 	/* server address */
 	struct sockaddr_in servAddr;
@@ -61,28 +70,34 @@ int main()
 
 	// Fork, a parent and a child
 	int pid;
-
 	pid = fork();
 
 	if (pid > 0)
 	{
 		printf("parent pid: %d\n", getpid());
+		memcpy(shm, connQueue, sizeof(struct array_queue));
+		enqueue(shm, 4);
+		display_queue(shm);
+		display_queue(connQueue);
+		// printf("%s\n", shm);
 		/* loop the server, accept and enqueue connection */
-		while (1)
-		{
-			connfd = accept(listenfd, (struct sockaddr *) &clitAddr, &clitlen);
-			if (connfd > 0)
-			{
-				enqueue(connQueue, connfd);
-			}
-			printf("enqueue connfd: %d\n", connfd);
-		}
+		// while (1)
+		// {
+		// 	connfd = accept(listenfd, (struct sockaddr *) &clitAddr, &clitlen);
+		// 	if (connfd > 0)
+		// 	{
+		// 		enqueue(connQueue, connfd);
+		// 	}
+		// 	printf("enqueue connfd: %d\n", connfd);
+		// }
 	}
 	else if (pid == 0)
 	{
-		sleep(10);
+		// sleep(1);
 		printf("child pid: %d\n", getpid());
-		clientHandler((void *) connQueue);
+		display_queue(shm);
+		display_queue(connQueue);
+		// clientHandler((void *) connQueue);
 	}
 	else
 	{
