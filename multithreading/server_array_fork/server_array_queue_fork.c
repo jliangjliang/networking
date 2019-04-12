@@ -8,6 +8,8 @@
 #include <sys/ipc.h>
 #include <sys/shm.h>
 #include <sys/mman.h>
+#include <sys/wait.h>
+#include <sys/file.h>
 #include "array_queue_fork.h"
 
 #define NUMWORKER 2
@@ -25,24 +27,21 @@ void *clientHandler(void *fdPointer);
 int main()
 {
 	/* Share memory */
+	const char *memname = "mem";
+	const size_t region_size = sysconf(_SC_PAGE_SIZE);
 
-	/* create access key */
-	key_t key = ftok("shmfile", 65);
+	int fd = shm_open(memname, O_CREAT | O_TRUNC | O_RDWR, 0666);
+	if (fd == -1)
+		perror("shm_open");
 
-	/* get share memory id */
-	int shmid = shmget(key, MEMSIZE, IPC_CREAT | 0666);
+	int r = ftruncate(fd, region_size);
+	if (r != 0)
+		perror("ftruncate");
 
-	/* declare shm */
-	struct array_queue *shm;
-
-	/* attach to share memory */
-	shm = (struct array_queue *) shmat(shmid, NULL, 0);
-
-	// int protection = PROT_READ | PROT_WRITE;
-
-	// int visibility = MAP_ANONYMOUS | MAP_SHARED;
-
-	// void* shm = mmap(NULL, 128, protection, visibility, 0, 0);
+	void *ptr = mmap(0, region_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	if (ptr == MAP_FAILED)
+		perror("mmap");
+	close(fd);
 
 	/* create connection queue */
 	struct array_queue *connQueue = create_queue(QUEUECAPACITY);
@@ -75,10 +74,17 @@ int main()
 	if (pid > 0)
 	{
 		printf("parent pid: %d\n", getpid());
-		memcpy(shm, connQueue, sizeof(struct array_queue));
-		enqueue(shm, 4);
-		display_queue(shm);
+		enqueue(connQueue, 4);
+		enqueue(connQueue, 5);
+		memcpy(ptr, connQueue, sizeof(struct array_queue));
+		msync(ptr, region_size, MS_SYNC);
+		// memcpy(ptr, &connQueue->count, sizeof(int));
 		display_queue(connQueue);
+    	exit(0);
+		// memcpy(shm, connQueue, sizeof(struct array_queue));
+		// enqueue(shm, 4);
+		// display_queue(shm);
+		// display_queue(connQueue);
 		// printf("%s\n", shm);
 		/* loop the server, accept and enqueue connection */
 		// while (1)
@@ -95,8 +101,9 @@ int main()
 	{
 		// sleep(1);
 		printf("child pid: %d\n", getpid());
-		display_queue(shm);
-		display_queue(connQueue);
+		int status;
+    	waitpid(pid, &status, 0);
+		display_queue(ptr);
 		// clientHandler((void *) connQueue);
 	}
 	else
@@ -104,6 +111,9 @@ int main()
 		perror("fork() failed");
 		exit(1);
 	}
+
+	r = munmap(ptr, region_size);
+	r = shm_unlink(memname);
 
 	return 0;
 }
