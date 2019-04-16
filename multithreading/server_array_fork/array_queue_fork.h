@@ -10,13 +10,11 @@ struct array_queue
     int count;
     int capacity;
     int *array;
-    pthread_mutex_t lock;
-    pthread_cond_t not_empty;
-    pthread_cond_t not_full;
+    sem_t mutex;
 };
 
 /* create queue */
-struct array_queue *create_queue(int capacity);
+void *ini_queue(struct array_queue *queue, int capacity);
 
 /* enqueue */
 void enqueue(struct array_queue *queue, int data);

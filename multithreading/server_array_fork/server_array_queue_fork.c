@@ -10,6 +10,8 @@
 #include <sys/mman.h>
 #include <sys/wait.h>
 #include <sys/file.h>
+#include <semaphore.h>
+#include <sys/file.h>
 #include "array_queue_fork.h"
 
 #define NUMWORKER 2
@@ -21,14 +23,13 @@
 
 // TODO: need to destroy buffer, queue, thread
 
-/* declare functions */
-void *clientHandler(void *fdPointer);
-
 int main()
 {
 	/* Share memory */
 	const char *memname = "mem";
 	const size_t region_size = sysconf(_SC_PAGE_SIZE);
+
+	struct array_queue connQueue;
 
 	int fd = shm_open(memname, O_CREAT | O_TRUNC | O_RDWR, 0666);
 	if (fd == -1)
@@ -38,13 +39,28 @@ int main()
 	if (r != 0)
 		perror("ftruncate");
 
-	void *ptr = mmap(0, region_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	write(fd, &connQueue, sizeof(struct array_queue));
+
+	struct array_queue *ptr;
+
+	ptr = mmap(NULL, sizeof(struct array_queue), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
 	if (ptr == MAP_FAILED)
 		perror("mmap");
 	close(fd);
 
 	/* create connection queue */
-	struct array_queue *connQueue = create_queue(QUEUECAPACITY);
+	// struct array_queue *connQueue = create_queue(QUEUECAPACITY);
+
+	/* initialize queue */
+	// ini_queue(ptr, QUEUECAPACITY);
+	ptr->head = 0;
+	ptr->tail = 0;
+	ptr->count = 0;
+	ptr->capacity = QUEUECAPACITY;
+	ptr->array = (int *) malloc(QUEUECAPACITY*sizeof(int));
+	sem_init(&ptr->mutex, 1, 1);
+
+	setbuf(stdout, NULL);
 
 	/* server address */
 	struct sockaddr_in servAddr;
@@ -74,18 +90,16 @@ int main()
 	if (pid > 0)
 	{
 		printf("parent pid: %d\n", getpid());
-		enqueue(connQueue, 4);
-		enqueue(connQueue, 5);
-		memcpy(ptr, connQueue, sizeof(struct array_queue));
-		msync(ptr, region_size, MS_SYNC);
-		// memcpy(ptr, &connQueue->count, sizeof(int));
-		display_queue(connQueue);
-    	exit(0);
-		// memcpy(shm, connQueue, sizeof(struct array_queue));
-		// enqueue(shm, 4);
-		// display_queue(shm);
-		// display_queue(connQueue);
-		// printf("%s\n", shm);
+		// sem_wait(&ptr->mutex);
+		enqueue(ptr, 4);
+		enqueue(ptr, 5);
+		for (int i = 0; i < ptr->capacity; i++)
+		{
+			/* code */
+			printf("parent array element: %d\n", ptr->array[i]);
+		}
+		// sem_post(&ptr->mutex);
+		exit(0);
 		/* loop the server, accept and enqueue connection */
 		// while (1)
 		// {
@@ -99,11 +113,19 @@ int main()
 	}
 	else if (pid == 0)
 	{
-		// sleep(1);
 		printf("child pid: %d\n", getpid());
-		int status;
-    	waitpid(pid, &status, 0);
-		display_queue(ptr);
+		// sem_wait(&ptr->mutex);
+		printf("child count: %d\n", ptr->count);
+		printf("child head: %d\n", ptr->head);
+		printf("child tail: %d\n", ptr->tail);
+		printf("child capacity: %d\n", ptr->capacity);
+		for (int i = 0; i < ptr->capacity; i++)
+		{
+			/* code */
+			printf("child array element: %d\n", ptr->array[i]);
+		}
+		// sem_post(&ptr->mutex);
+		exit(0);
 		// clientHandler((void *) connQueue);
 	}
 	else

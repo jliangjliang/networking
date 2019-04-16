@@ -1,21 +1,41 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <semaphore.h>
+#include <syscall.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
+#include <sys/mman.h>
+#include <sys/wait.h>
+#include <sys/file.h>
+#include <semaphore.h>
+#include <sys/file.h>
 #include "array_queue_fork.h"
 
 /* create a queue*/
-struct array_queue *create_queue(int capacity)
+void *ini_queue(struct array_queue *q, int capacity)
 {
-	struct array_queue *q = (struct array_queue*)malloc(1*sizeof(struct array_queue));
 	q->head = 0;
 	q->tail = 0;
 	q->count = 0;
 	q->capacity = capacity;
-	q->array = malloc(capacity*sizeof(int));
-	pthread_mutex_init(&(q->lock), NULL);
-	pthread_cond_init(&(q->not_empty), NULL);
-	pthread_cond_init(&(q->not_full), NULL);
-	return q;
+	q->array = ptr;
+	sem_init(&q->mutex, 1, 1);
+}
+
+/* need to create a shared memnory for the array? */
+void *shared_array(int capacity)
+{
+	int *array = (int *) malloc(capacity*sizeof(int));
+	const char *memname = "array";
+	const size_t region_size = sysconf(_SC_PAGE_SIZE);
+	int fd = shm_open(memname, O_CREAT | O_TRUNC | O_RDWR, 0666);
+	int r = ftruncate(fd, region_size);
+	write(fd, &array, sizeof(int)); // size of int?
+	int *ptr = mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+	close(fd);
+
+	return ptr;
 }
 
 /* enqueue a node if the queue is not full */
